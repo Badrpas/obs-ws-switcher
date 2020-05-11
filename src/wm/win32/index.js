@@ -1,8 +1,12 @@
 const ref = require('ref-napi');
+const Struct = require('ref-struct-napi');
 const ffi = require('ffi-napi');
 const events = require('../events');
+const win32def = require('win32-def');
 const user32 = require('./user32');
 const { WindowDescriptor, WindowManagerBase } = require('../base');
+
+const RectType = Struct(win32def.DStruct.RECT);
 
 const STRING_MAX_LENGTH = 255;
 const STRING_BUFFER = Buffer.alloc(STRING_MAX_LENGTH * 2 + 1);
@@ -36,12 +40,16 @@ module.exports = class extends WindowManagerBase {
     const attrs = {};
     attrs.handle = user32.GetForegroundWindow();
 
-    user32.GetWindowTextA(attrs.handle, STRING_BUFFER, STRING_MAX_LENGTH);
-    attrs.title = ref.readCString(STRING_BUFFER);
+    user32.GetWindowTextW(attrs.handle, STRING_BUFFER, STRING_MAX_LENGTH);
+    // attrs.title = ref.readCString(STRING_BUFFER);
+    attrs.title = STRING_BUFFER.toString('utf16le').replace(/\0+$/, '');
 
     STRING_BUFFER.fill(0);
     let r = user32.GetClassNameW(attrs.handle, STRING_BUFFER, STRING_MAX_LENGTH);
-    attrs.className = STRING_BUFFER.toString('UCS2').replace(/\0+$/, '');
+    attrs.className = STRING_BUFFER.toString('utf16le').replace(/\0+$/, '');
+
+    attrs.rect = new RectType();
+    user32.GetWindowRect(attrs.handle, attrs.rect.ref());
 
     return WindowDescriptor.getInstance(attrs.handle, attrs);
   }
