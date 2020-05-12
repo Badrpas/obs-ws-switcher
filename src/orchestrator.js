@@ -18,8 +18,11 @@ class Orchestrator {
         }),
         this.fetchData(frame, 'SourceSettings', {
           sourceName: frame.destination
-        })
+        }),
       ]);
+
+      frame.init && await frame.init(this);
+
       console.log(`${frame.destination} done.`);
     });
 
@@ -53,40 +56,55 @@ class Orchestrator {
 
   async updateFrame (frame) {
     const promises = [];
-    const ok = await this.isOk(frame);
+    const isActive = await this.runPredicate(frame);
 
-    if (ok) {
+    if (isActive) {
       promises.push(this.setDestination(frame));
     }
 
+    if (typeof frame.active === 'undefined' || frame.active !== isActive) {
+      if (isActive) {
+        frame.onActive && await frame.onActive(this.curr, this);
+      } else {
+        frame.onRelease && await frame.onRelease(this.curr, this);
+      }
+      frame.active = isActive;
+    }
+
     if (frame.hide) {
-      promises.push(this.setFrameVisibility(frame, ok));
+      promises.push(this.setFrameVisibility(frame, isActive));
     }
 
     return Promise.all(promises);
   }
 
-  async isOk(frame) {
+  async runPredicate(frame) {
     if (typeof frame.predicate === 'function') {
-      return await frame.predicate(this.curr);
+      return await frame.predicate(this.curr, this);
     }
 
     const title = this.curr.get('title');
-    if (frame.title) {
-      for (const pattern of frame.title.oneOf) {
-        if (pattern instanceof RegExp && pattern.test(title)) {
-          console.log(title);
-          return true;
-        } else if (typeof pattern === 'string' && title.includes(pattern)) {
-          return true;
-        }
+
+    function p (pattern) {
+      if (pattern instanceof RegExp && pattern.test(title)) {
+        return true;
+      } else if (typeof pattern === 'string' && title.includes(pattern)) {
+        return true;
       }
+    }
+
+    if (frame.title) {
+      return (frame.title.oneOf  || []).some(p)
+         && !(frame.title.noneOf || []).some(p);
     }
 
     return false;
   }
 
   async setDestination (frame) {
+    if (frame.remote.SourceSettings.sourceType !== 'window_capture') {
+      return;
+    }
     const query = frame.remote.SourceSettings.sourceSettings.window;
     const window = this.curr;
     await this.obs.send('SetSourceSettings', {

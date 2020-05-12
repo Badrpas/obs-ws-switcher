@@ -7,6 +7,7 @@ const user32 = require('./user32');
 const { WindowDescriptor, WindowManagerBase } = require('../base');
 
 const RectType = Struct(win32def.DStruct.RECT);
+const PointType = Struct(win32def.DStruct.POINT);
 
 const STRING_MAX_LENGTH = 255;
 const STRING_BUFFER = Buffer.alloc(STRING_MAX_LENGTH * 2 + 1);
@@ -15,10 +16,18 @@ const UPDATE_INTERVAL = 100;
 module.exports = class extends WindowManagerBase {
   constructor () {
     super();
+    this.mouse = {
+      position: new PointType()
+    };
 
+    setInterval(() => this.updateMousePos(), 60);
     setInterval(() => {
       this.updateCurrentWindow();
     }, UPDATE_INTERVAL);
+  }
+
+  updateMousePos () {
+    user32.GetCursorPos(this.mouse.position.ref());
   }
 
   updateCurrentWindow () {

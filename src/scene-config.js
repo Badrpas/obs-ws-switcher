@@ -1,73 +1,81 @@
-module.exports = [
-
+module.exports.frames = [
   {
-    sourceName: 'Vertical WebStorm',
-    visibleWhen: [
-      `eaciest [D:\\projects\\eaciest]`,
-      `eacy [D:\\projects\\eacy]`,
-      `eacy-ui [D:\\projects\\eacy-ui]`,
-    ],
-    setFromTitle: true
-  },
-
-  {
-    sourceName: 'chrome keep it alive',
-    visibleWhen: [
-      `Keep it alive - Google Chrome`
-    ]
-  },
-
-  {
-    sourceName: 'Main WebStorm',
-    visibleWhen: [
-      `obs-ws-switcher`
-    ]
-  },
-
-];
-
-const frames = module.exports.frames = [
-  {
-    // type: 'window',
+    destination: 'Main WebStorm',
     predicate: window => {
       const rect = window.get('rect');
       return window.get('title').includes('- WebStorm')
           && rect.left >= -5;
     },
-    destination: 'Main WebStorm'
   },
+
   {
-    // type: 'window',
-    title: {
-      oneOf: [/поиск в google - Google Chrome/i],
-    },
-    hide: true,
     destination: 'Browser Window',
-  },
-  {
-    // type: 'window',
     title: {
-      oneOf:  [`Keep it alive - Google Chrome`]
+      oneOf: [/ - Google Chrome/i],
+      noneOf: [
+        /Auth/i,
+        /login/i,
+        /password/i,
+        /Personal access tokens/i,
+      ],
     },
     hide: true,
-    destination: 'chrome keep it alive',
   },
+
   {
-    // type: 'window',
+    destination: 'Vertical WebStorm',
     predicate: window => {
       const rect = window.get('rect');
       return window.get('title').includes('- WebStorm')
         && rect.right <= 15;
     },
+    hide: true,
+  },
+
+  {
+    destination: 'chrome keep it alive',
     title: {
-      oneOf: [
-        `eaciest [D:\\projects\\eaciest]`,
-        `eacy [D:\\projects\\eacy]`,
-        `eacy-ui [D:\\projects\\eacy-ui]`,
-      ],
+      oneOf:  [`Keep it alive - Google Chrome`]
     },
     hide: true,
-    destination: 'Vertical WebStorm',
+    // onActi
+  },
+
+  {
+    destination: 'Left Upper side',
+    title: {
+      oneOf: [
+        `Keep it alive - Google Chrome`,
+      ],
+    },
+    transformTo: {
+      position: {x: 740, y: 203},
+      scale: { x: 1.1, y : 1.1 },
+    },
+    async cacheTransform (orchestrator) {
+      const {
+        position, scale, crop, bounds, width, height
+      } = await orchestrator.obs.send('GetSceneItemProperties', {
+        item: this.destination
+      });
+      console.log(scale);
+      this.cachedTransform = {
+        position, scale, crop, bounds, width, height
+      };
+    },
+    async onActive (window, orchestrator) {
+      await this.cacheTransform(orchestrator);
+      await orchestrator.obs.send('SetSceneItemProperties', {
+        item: this.destination,
+        ...this.transformTo
+      });
+    },
+    async onRelease (window, orchestrator) {
+      await orchestrator.obs.send('SetSceneItemProperties', {
+        item: this.destination,
+        ...this.cachedTransform
+      });
+    }
   },
 
 ];

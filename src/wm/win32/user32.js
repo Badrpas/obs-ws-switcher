@@ -10,6 +10,7 @@ const user32 = User32.load();
 ffi.Library(User32.dllName, {
   GetWindowTextA: ['int', [win32def.DTypes.HWND, win32def.DTypes.LPSTR, int]],
   GetClassNameW: ['int', [win32def.DTypes.HWND, win32def.DTypes.LPWSTR, int]],
+  GetCursorPos: [win32def.DTypes.BOOL, [win32def.DTypes.LPPOINT]],
 }, user32);
 
 
